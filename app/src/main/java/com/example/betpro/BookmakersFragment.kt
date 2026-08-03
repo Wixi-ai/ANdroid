@@ -1,6 +1,7 @@
 package com.example.betpro
 
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -35,7 +36,7 @@ class BookmakersFragment : Fragment() {
     private fun createBookmakerCard(b: Bookmaker): View {
         val cardView = layoutInflater.inflate(R.layout.item_bookmaker, null) as androidx.cardview.widget.CardView
 
-        // БЕЗОПАСНЫЙ СПОСОБ ДОБАВИТЬ ОТСТУПЫ
+        // Отступы между карточками
         val layoutParams = LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.WRAP_CONTENT
@@ -52,8 +53,8 @@ class BookmakersFragment : Fragment() {
 
         val button = cardView.findViewById<MaterialButton>(R.id.btn_go)
         button.setOnClickListener {
-            val intent = Intent(activity, WebViewActivity::class.java)
-            intent.putExtra("url", b.refLink)
+            // ОТКРЫВАЕМ В БРАУЗЕРЕ (НЕ В WEBVIEW)
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(b.refLink))
             startActivity(intent)
         }
 
