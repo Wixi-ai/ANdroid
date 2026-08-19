@@ -28,25 +28,24 @@ class HistoryAdapter(private var bets: List<Bet>) : RecyclerView.Adapter<History
     }
 
     class HistoryViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        private val statusIcon: TextView = itemView.findViewById(R.id.status_icon)
         private val betAmount: TextView = itemView.findViewById(R.id.bet_amount)
-        private val betDate: TextView = itemView.findViewById(R.id.bet_date)
+        private val betDetails: TextView = itemView.findViewById(R.id.bet_details)
         private val betResult: TextView = itemView.findViewById(R.id.bet_result)
 
         fun bind(bet: Bet) {
             betAmount.text = String.format(Locale.getDefault(), "%.0f ₽", bet.amount)
 
             val dateFormat = SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault())
-            betDate.text = dateFormat.format(bet.date)
+            val dateStr = dateFormat.format(bet.date)
+            betDetails.text = "${bet.bookmaker} • Кф ${String.format("%.2f", bet.odds)} • $dateStr"
+
+            val profit = if (bet.isWin) bet.amount * bet.odds - bet.amount else -bet.amount
+            val sign = if (profit >= 0) "+" else ""
+            betResult.text = "$sign${String.format("%.0f", profit)} ₽"
 
             if (bet.isWin) {
-                val profit = bet.amount * bet.odds - bet.amount
-                statusIcon.text = "✅"
-                betResult.text = String.format(Locale.getDefault(), "+%.0f ₽", profit)
                 betResult.setTextColor(0xFF4CAF50.toInt())
             } else {
-                statusIcon.text = "❌"
-                betResult.text = String.format(Locale.getDefault(), "-%.0f ₽", bet.amount)
                 betResult.setTextColor(0xFFE53935.toInt())
             }
         }
