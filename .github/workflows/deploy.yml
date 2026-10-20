@@ -23,17 +23,22 @@ jobs:
       run: |
         echo "${{ secrets.KEY_STORE }}" | base64 --decode > my-release-key.jks
 
-    # Собираем и подписываем APK (задали жесткий абсолютный путь через $GITHUB_WORKSPACE)
+    # Автоматически определяем алиас ключа из файла jks и собираем проект
     - name: Build and Sign Release APK
       run: |
         chmod +x gradlew
+        
+        # Лайфхак: утилитаkeytool сама вытащит точное имя алиаса из jks
+        DETECTED_ALIAS=$(keytool -list -v -keystore my-release-key.jks -storepass "${{ secrets.KEY_STORE_PASSWORD }}" | grep "Alias name:" | head -n 1 | cut -d ' ' -f 3- | tr -d '\r\n')
+        echo "Detected key alias: '$DETECTED_ALIAS'"
+        
         ./gradlew assembleRelease \
           -Pandroid.injected.signing.store.file=$GITHUB_WORKSPACE/my-release-key.jks \
           -Pandroid.injected.signing.store.password="${{ secrets.KEY_STORE_PASSWORD }}" \
-          -Pandroid.injected.signing.key.alias="${{ secrets.KEY_STORE_ALIAS }}" \
+          -Pandroid.injected.signing.key.alias="$DETECTED_ALIAS" \
           -Pandroid.injected.signing.key.password="${{ secrets.KEY_STORE_PASSWORD }}"
 
-    # Скачиваем официальный инструмент RuStore CLI и загружаем APK напрямую в консоль
+    # Скачиваем официальный инструмент RuStore CLI и загружаем готовый APK
     - name: Upload APK via RuStore CLI
       run: |
         curl -L -o rustore-cli https://github.com
