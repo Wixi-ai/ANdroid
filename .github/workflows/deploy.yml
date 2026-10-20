@@ -1,34 +1,37 @@
-name: Build and Push APK to RuStore
+name: Build APK for Manual Upload
 
 on:
   push:
     branches: [ "master" ]
-  workflow_dispatch:
+  workflow_dispatch: # Позволяет запускать сборку кнопкой
 
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
 
     steps:
+    # 1. Скачиваем файлы проекта из репозитория
     - name: Checkout repository
       uses: actions/checkout@v4
 
+    # 2. Устанавливаем Java (JDK) для сборщика Gradle
     - name: Set up JDK
       uses: actions/setup-java@v4
       with:
         distribution: 'temurin'
         java-version: '17'
 
+    # 3. Восстанавливаем файл подписи из секретов GitHub
     - name: Decode Keystore
       run: |
         echo "${{ secrets.KEY_STORE }}" | base64 --decode > my-release-key.jks
 
-    # Автоматически определяем алиас ключа из файла jks и собираем проект
+    # 4. Собираем релизный APK и автоматически подписываем его
     - name: Build and Sign Release APK
       run: |
         chmod +x gradlew
         
-        # Утилита keytool сама вытащит точное имя алиаса из jks
+        # Автоматически определяем точное имя алиаса из jks
         DETECTED_ALIAS=$(keytool -list -v -keystore my-release-key.jks -storepass "${{ secrets.KEY_STORE_PASSWORD }}" | grep "Alias name:" | head -n 1 | cut -d ' ' -f 3- | tr -d '\r\n')
         echo "Detected key alias: '$DETECTED_ALIAS'"
         
@@ -38,13 +41,9 @@ jobs:
           -Pandroid.injected.signing.key.alias="$DETECTED_ALIAS" \
           -Pandroid.injected.signing.key.password="${{ secrets.KEY_STORE_PASSWORD }}"
 
-    # Используем проверенный готовый экшен публикации из GitHub Marketplace
-    - name: Upload APK to RuStore
-      uses: cianru/rustore-publish-action@v1.2.0 # <-- ПРАВИЛЬНОЕ ОФИЦИАЛЬНОЕ НАЗВАНИЕ ЭКШЕНА
+    # 5. Публикуем готовый APK в интерфейс GitHub, чтобы его можно было скачать
+    - name: Upload APK Artifact
+      uses: actions/upload-artifact@v4
       with:
-        key-id: ${{ secrets.RUSTORE_KEY_ID }}
-        private-key: ${{ secrets.RUSTORE_PRIVATE_KEY }}
-        app-id: "com.example.betpro" # Ваш проверенный ID приложения
-        file-path: "app/build/outputs/apk/release/app-release.apk"
-        whats-new: "Автоматическое обновление из GitHub Actions"
-        publish-type: "MANUAL" # MANUAL создаст черновик для проверки в консоли RuStore
+        name: Signed-Release-APK # Название архива для скачивания
+        path: app/build/outputs/apk/release/app-release.apk # Путь к собранному файлу
