@@ -38,13 +38,13 @@ jobs:
           -Pandroid.injected.signing.key.alias="$DETECTED_ALIAS" \
           -Pandroid.injected.signing.key.password="${{ secrets.KEY_STORE_PASSWORD }}"
 
-    # Используем официальный готовый экшен публикации от RuStore
+    # Используем официальный готовый экшен публикации из GitHub Marketplace
     - name: Upload APK to RuStore
-      uses: RuStore/rustore-publish-action@v1.2.0
+      uses: cianru/rustore-publish@v1.2.0
       with:
         key-id: ${{ secrets.RUSTORE_KEY_ID }}
         private-key: ${{ secrets.RUSTORE_PRIVATE_KEY }}
         app-id: "com.example.betpro"
         file-path: "app/build/outputs/apk/release/app-release.apk"
         whats-new: "Автоматическое обновление из GitHub Actions"
-        publish-type: "MANUAL"
+        publish_type: "MANUAL"
