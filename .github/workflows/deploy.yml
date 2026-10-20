@@ -28,7 +28,7 @@ jobs:
       run: |
         chmod +x gradlew
         
-        # Лайфхак: утилитаkeytool сама вытащит точное имя алиаса из jks
+        # Утилита keytool сама вытащит точное имя алиаса из jks
         DETECTED_ALIAS=$(keytool -list -v -keystore my-release-key.jks -storepass "${{ secrets.KEY_STORE_PASSWORD }}" | grep "Alias name:" | head -n 1 | cut -d ' ' -f 3- | tr -d '\r\n')
         echo "Detected key alias: '$DETECTED_ALIAS'"
         
@@ -38,15 +38,13 @@ jobs:
           -Pandroid.injected.signing.key.alias="$DETECTED_ALIAS" \
           -Pandroid.injected.signing.key.password="${{ secrets.KEY_STORE_PASSWORD }}"
 
-    # Скачиваем официальный инструмент RuStore CLI и загружаем готовый APK
-    - name: Upload APK via RuStore CLI
-      run: |
-        curl -L -o rustore-cli https://github.com
-        chmod +x rustore-cli
-        ./rustore-cli publish upload \
-          --key-id "${{ secrets.RUSTORE_KEY_ID }}" \
-          --private-key "${{ secrets.RUSTORE_PRIVATE_KEY }}" \
-          --app-id "com.example.betpro" \
-          --file-path "app/build/outputs/apk/release/app-release.apk" \
-          --whats-new "Автоматическое обновление из GitHub Actions" \
-          --publish-type "MANUAL"
+    # Используем официальный готовый экшен публикации от RuStore
+    - name: Upload APK to RuStore
+      uses: RuStore/rustore-publish-action@v1.2.0
+      with:
+        key-id: ${{ secrets.RUSTORE_KEY_ID }}
+        private-key: ${{ secrets.RUSTORE_PRIVATE_KEY }}
+        app-id: "com.example.betpro"
+        file-path: "app/build/outputs/apk/release/app-release.apk"
+        whats-new: "Автоматическое обновление из GitHub Actions"
+        publish-type: "MANUAL"
