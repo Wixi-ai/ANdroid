@@ -2,41 +2,42 @@ name: Build and Push APK to RuStore
 
 on:
   push:
-    branches: [ "master" ] # Запускается при любом изменении в вашей ветке master
-  workflow_dispatch:      # Добавляет кнопку для ручного запуска в интерфейсе GitHub
+    branches: [ "master" ]
+  workflow_dispatch:
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-    # 1. Скачиваем файлы вашего проекта из репозитория
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    # 2. Устанавливаем Java (JDK) для сборщика Gradle
     - name: Set up JDK
       uses: actions/setup-java@v4
       with:
         distribution: 'temurin'
-        java-version: '17' # Если проект старый и не собирается, можно будет поменять на '11'
+        java-version: '17'
 
-    # 3. Восстанавливаем ваш созданный ранее ключ подписи из секретов GitHub
     - name: Decode Keystore
       run: |
         echo "${{ secrets.KEY_STORE }}" | base64 --decode > app/my-release-key.jks
 
-    # 4. Собираем релизный APK и сразу загружаем его напрямую в консоль RuStore с помощью Gradle
-    - name: Build, Sign and Upload APK to RuStore
+    # Собираем и подписываем APK (записали в одну строку, чтобы Linux точно всё понял)
+    - name: Build and Sign Release APK
       run: |
         chmod +x gradlew
-        ./gradlew assembleRelease \
-          -Pandroid.injected.signing.store.file=my-release-key.jks \
-          -Pandroid.injected.signing.store.password=${{ secrets.KEY_STORE_PASSWORD }} \
-          -Pandroid.injected.signing.key.alias=${{ secrets.KEY_STORE_ALIAS }} \
-          -Pandroid.injected.signing.key.password=${{ secrets.KEY_STORE_PASSWORD }} \
-          -PrustoreKeyId=${{ secrets.RUSTORE_KEY_ID }} \
-          -PrustorePrivateKey=${{ secrets.RUSTORE_PRIVATE_KEY }} \
-          -PrustoreAppId="com.example.betpro" \
-          -PrustorePublishType=MANUAL \
-          -PrustoreWhatsNew="Автоматическое обновление из GitHub Actions"
+        ./gradlew assembleRelease -Pandroid.injected.signing.store.file=my-release-key.jks -Pandroid.injected.signing.store.password="${{ secrets.KEY_STORE_PASSWORD }}" -Pandroid.injected.signing.key.alias="${{ secrets.KEY_STORE_ALIAS }}" -Pandroid.injected.signing.key.password="${{ secrets.KEY_STORE_PASSWORD }}"
+
+    # Скачиваем официальный инструмент RuStore CLI и загружаем APK напрямую в консоль
+    - name: Upload APK via RuStore CLI
+      run: |
+        curl -L -o rustore-cli https://github.com
+        chmod +x rustore-cli
+        ./rustore-cli publish upload \
+          --key-id "${{ secrets.RUSTORE_KEY_ID }}" \
+          --private-key "${{ secrets.RUSTORE_PRIVATE_KEY }}" \
+          --app-id "com.example.betpro" \
+          --file-path "app/build/outputs/apk/release/app-release.apk" \
+          --whats-new "Автоматическое обновление из GitHub Actions" \
+          --publish-type "MANUAL"
