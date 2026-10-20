@@ -2,14 +2,15 @@ name: Build and Push APK to RuStore
 
 on:
   push:
-    branches: [ "main" ] # Сборка будет запускаться каждый раз, когда вы пушите код в ветку main
+    branches: [ "master" ] # Запускается при любом изменении в вашей ветке master
+  workflow_dispatch:      # Добавляет кнопку для ручного запуска в интерфейсе GitHub
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-    # 1. Скачиваем файлы проекта из репозитория
+    # 1. Скачиваем файлы вашего проекта из репозитория
     - name: Checkout repository
       uses: actions/checkout@v4
 
@@ -18,14 +19,14 @@ jobs:
       uses: actions/setup-java@v4
       with:
         distribution: 'temurin'
-        java-version: '17' # Если проект старый, можно заменить на '11'
+        java-version: '17' # Если проект старый и не собирается, можно будет поменять на '11'
 
-    # 3. Достаем ваш сгенерированный ранее ключ подписи из секретов GitHub
+    # 3. Восстанавливаем ваш созданный ранее ключ подписи из секретов GitHub
     - name: Decode Keystore
       run: |
         echo "${{ secrets.KEY_STORE }}" | base64 --decode > app/my-release-key.jks
 
-    # 4. Запускаем сборку APK и «вбиваем» в нее наш ключ подписи
+    # 4. Собираем релизный APK и автоматически подписываем его ключом
     - name: Build and Sign Release APK
       run: |
         chmod +x gradlew
@@ -35,13 +36,13 @@ jobs:
           -Pandroid.injected.signing.key.alias=${{ secrets.KEY_STORE_ALIAS }} \
           -Pandroid.injected.signing.key.password=${{ secrets.KEY_STORE_PASSWORD }}
 
-    # 5. Берем готовый APK и загружаем в консоль RuStore
+    # 5. Берем готовый APK и загружаем его напрямую в консоль RuStore
     - name: Upload APK to RuStore
-      uses: cianru/rustore-publish-action@v1 # Используем проверенный готовый экшен от ЦИАН
+      uses: cianru/rustore-publish-action@v1
       with:
         credentials_key_id: ${{ secrets.RUSTORE_KEY_ID }}
         credentials_private_key: ${{ secrets.RUSTORE_PRIVATE_KEY }}
-        application_id: "ru.yourcompany.yourapp" # !!! ЗАМЕНИТЕ НА PACKAGE NAME ВАШЕГО ПРИЛОЖЕНИЯ !!!
-        file: "app/build/outputs/apk/release/app-release.apk" # Стандартный путь к собранному APK
-        whats_new: "Автоматическое обновление из GitHub Actions" # Описание изменений для релиза
-        publish_type: "MANUAL" # MANUAL — создаст черновик (для первой проверки), INSTANTLY — сразу опубликует после модерации
+        application_id: "com.example.betpro" # !!! ОБЯЗАТЕЛЬНО ЗАМЕНИТЕ НА PACKAGE NAME ВАШЕГО ПРИЛОЖЕНИЯ !!!
+        file: "app/build/outputs/apk/release/app-release.apk"
+        whats_new: "Автоматическое обновление из GitHub Actions"
+        publish_type: "MANUAL" # MANUAL создаст черновик для проверки. Если нужно сразу публиковать — измените на INSTANTLY
