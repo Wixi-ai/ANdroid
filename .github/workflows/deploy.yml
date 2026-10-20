@@ -26,23 +26,17 @@ jobs:
       run: |
         echo "${{ secrets.KEY_STORE }}" | base64 --decode > app/my-release-key.jks
 
-    # 4. Собираем релизный APK и автоматически подписываем его ключом
-    - name: Build and Sign Release APK
+    # 4. Собираем релизный APK и сразу загружаем его напрямую в консоль RuStore с помощью Gradle
+    - name: Build, Sign and Upload APK to RuStore
       run: |
         chmod +x gradlew
         ./gradlew assembleRelease \
           -Pandroid.injected.signing.store.file=my-release-key.jks \
           -Pandroid.injected.signing.store.password=${{ secrets.KEY_STORE_PASSWORD }} \
           -Pandroid.injected.signing.key.alias=${{ secrets.KEY_STORE_ALIAS }} \
-          -Pandroid.injected.signing.key.password=${{ secrets.KEY_STORE_PASSWORD }}
-
-    # 5. Берем готовый APK и загружаем его напрямую в консоль RuStore
-    - name: Upload APK to RuStore
-      uses: cianru/rustore-publish-gradle-plugin@v1.1.2 # Полностью исправленное рабочее название экшена
-      with:
-        credentials_key_id: ${{ secrets.RUSTORE_KEY_ID }}
-        credentials_private_key: ${{ secrets.RUSTORE_PRIVATE_KEY }}
-        application_id: "com.example.betpro" # Ваш проверенный ID приложения
-        file: "app/build/outputs/apk/release/app-release.apk"
-        whats_new: "Автоматическое обновление из GitHub Actions"
-        publish_type: "MANUAL" # MANUAL создаст черновик для проверки в консоли RuStore
+          -Pandroid.injected.signing.key.password=${{ secrets.KEY_STORE_PASSWORD }} \
+          -PrustoreKeyId=${{ secrets.RUSTORE_KEY_ID }} \
+          -PrustorePrivateKey=${{ secrets.RUSTORE_PRIVATE_KEY }} \
+          -PrustoreAppId="com.example.betpro" \
+          -PrustorePublishType=MANUAL \
+          -PrustoreWhatsNew="Автоматическое обновление из GitHub Actions"
