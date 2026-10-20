@@ -21,13 +21,17 @@ jobs:
 
     - name: Decode Keystore
       run: |
-        echo "${{ secrets.KEY_STORE }}" | base64 --decode > app/my-release-key.jks
+        echo "${{ secrets.KEY_STORE }}" | base64 --decode > my-release-key.jks
 
-    # Собираем и подписываем APK (записали в одну строку, чтобы Linux точно всё понял)
+    # Собираем и подписываем APK (задали жесткий абсолютный путь через $GITHUB_WORKSPACE)
     - name: Build and Sign Release APK
       run: |
         chmod +x gradlew
-        ./gradlew assembleRelease -Pandroid.injected.signing.store.file=my-release-key.jks -Pandroid.injected.signing.store.password="${{ secrets.KEY_STORE_PASSWORD }}" -Pandroid.injected.signing.key.alias="${{ secrets.KEY_STORE_ALIAS }}" -Pandroid.injected.signing.key.password="${{ secrets.KEY_STORE_PASSWORD }}"
+        ./gradlew assembleRelease \
+          -Pandroid.injected.signing.store.file=$GITHUB_WORKSPACE/my-release-key.jks \
+          -Pandroid.injected.signing.store.password="${{ secrets.KEY_STORE_PASSWORD }}" \
+          -Pandroid.injected.signing.key.alias="${{ secrets.KEY_STORE_ALIAS }}" \
+          -Pandroid.injected.signing.key.password="${{ secrets.KEY_STORE_PASSWORD }}"
 
     # Скачиваем официальный инструмент RuStore CLI и загружаем APK напрямую в консоль
     - name: Upload APK via RuStore CLI
