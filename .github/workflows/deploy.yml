@@ -1,0 +1,47 @@
+name: Build and Push APK to RuStore
+
+on:
+  push:
+    branches: [ "main" ] # Сборка будет запускаться каждый раз, когда вы пушите код в ветку main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    # 1. Скачиваем файлы проекта из репозитория
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    # 2. Устанавливаем Java (JDK) для сборщика Gradle
+    - name: Set up JDK
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17' # Если проект старый, можно заменить на '11'
+
+    # 3. Достаем ваш сгенерированный ранее ключ подписи из секретов GitHub
+    - name: Decode Keystore
+      run: |
+        echo "${{ secrets.KEY_STORE }}" | base64 --decode > app/my-release-key.jks
+
+    # 4. Запускаем сборку APK и «вбиваем» в нее наш ключ подписи
+    - name: Build and Sign Release APK
+      run: |
+        chmod +x gradlew
+        ./gradlew assembleRelease \
+          -Pandroid.injected.signing.store.file=my-release-key.jks \
+          -Pandroid.injected.signing.store.password=${{ secrets.KEY_STORE_PASSWORD }} \
+          -Pandroid.injected.signing.key.alias=${{ secrets.KEY_STORE_ALIAS }} \
+          -Pandroid.injected.signing.key.password=${{ secrets.KEY_STORE_PASSWORD }}
+
+    # 5. Берем готовый APK и загружаем в консоль RuStore
+    - name: Upload APK to RuStore
+      uses: cianru/rustore-publish-action@v1 # Используем проверенный готовый экшен от ЦИАН
+      with:
+        credentials_key_id: ${{ secrets.RUSTORE_KEY_ID }}
+        credentials_private_key: ${{ secrets.RUSTORE_PRIVATE_KEY }}
+        application_id: "ru.yourcompany.yourapp" # !!! ЗАМЕНИТЕ НА PACKAGE NAME ВАШЕГО ПРИЛОЖЕНИЯ !!!
+        file: "app/build/outputs/apk/release/app-release.apk" # Стандартный путь к собранному APK
+        whats_new: "Автоматическое обновление из GitHub Actions" # Описание изменений для релиза
+        publish_type: "MANUAL" # MANUAL — создаст черновик (для первой проверки), INSTANTLY — сразу опубликует после модерации
