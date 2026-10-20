@@ -38,13 +38,26 @@ jobs:
           -Pandroid.injected.signing.key.alias="$DETECTED_ALIAS" \
           -Pandroid.injected.signing.key.password="${{ secrets.KEY_STORE_PASSWORD }}"
 
-    # Используем официальный готовый экшен публикации из GitHub Marketplace
-    - name: Upload APK to RuStore
-      uses: cianru/rustore-publish@v1.2.0
-      with:
-        key-id: ${{ secrets.RUSTORE_KEY_ID }}
-        private-key: ${{ secrets.RUSTORE_PRIVATE_KEY }}
-        app-id: "com.example.betpro"
-        file-path: "app/build/outputs/apk/release/app-release.apk"
-        whats-new: "Автоматическое обновление из GitHub Actions"
-        publish_type: "MANUAL"
+    # Прямая загрузка APK в RuStore через официальный API без сторонних плагинов
+    - name: Upload APK to RuStore via API
+      run: |
+        echo "Получаем токен авторизации..."
+        AUTH_RESPONSE=$(curl -s -X POST "https://vkplay.ru" \
+          -H "Content-Type: application/json" \
+          -d "{\"keyId\":\"${{ secrets.RUSTORE_KEY_ID }}\",\"privateKey\":\"${{ secrets.RUSTORE_PRIVATE_KEY }}\"}")
+          
+        TOKEN=$(echo "$AUTH_RESPONSE" | jq -r '.body.jws')
+        
+        if [ "$TOKEN" == "null" ] || [ -z "$TOKEN" ]; then
+          echo "Ошибка авторизации в RuStore: $AUTH_RESPONSE"
+          exit 1
+        fi
+        
+        echo "Загружаем APK-файл..."
+        UPLOAD_RESPONSE=$(curl -s -X POST "https://vkplay.ru" \
+          -H "Authorization: Bearer $TOKEN" \
+          -F "file=@app/build/outputs/apk/release/app-release.apk" \
+          -F "publishType=MANUAL" \
+          -F "whatsNew=Автоматическое обновление из GitHub Actions")
+          
+        echo "Ответ сервера RuStore: $UPLOAD_RESPONSE"
