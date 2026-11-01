@@ -1,3 +1,19 @@
 <resources>
-    <string name="app_name">BetPro</string>
+    <string name="app_name">Дневник ставок</string>
+    
+    <!-- Остальные строки оставляем как были -->
+    <string name="title_main">ГЛАВНАЯ</string>
+    <string name="balance_label">Текущий баланс</string>
+    <string name="balance_default">0 ₽</string>
+    <string name="winrate_label">винрейт</string>
+    <string name="winrate_default">0%</string>
+    <string name="bets_label">ставки</string>
+    <string name="bets_default">0</string>
+    <string name="time_label">в игре</string>
+    <string name="time_default">0 мин</string>
+    <string name="recent_label">ПОСЛЕДНИЕ СТАВКИ</string>
+    <string name="arrow">></string>
+    <string name="empty_trophy">🏆</string>
+    <string name="empty_text">ставок пока нет</string>
+    <string name="add_button_desc">Добавить ставку</string>
 </resources>
